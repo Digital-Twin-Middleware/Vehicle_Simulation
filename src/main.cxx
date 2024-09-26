@@ -1,13 +1,15 @@
 #include <iostream>
-#include "mqtt_client.h"
+#include "digital_twin_client.h"
 
 using namespace digital_twin;
 
 int main() {
-    Mqtt_client client;
+    digital_twin_client client;
 
     client.connect();
-
+	
+	//client.disconnect();
+	
     return 0;
 }
 

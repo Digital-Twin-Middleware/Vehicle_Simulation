@@ -4,7 +4,7 @@ project(VehicleSimulation)
 
 set(SOURCES 
     src/main.cxx
-    src/mqtt_client.cxx
+    src/digital_twin_client.cxx
 )
 
 find_package(PahoMqttCpp REQUIRED)
