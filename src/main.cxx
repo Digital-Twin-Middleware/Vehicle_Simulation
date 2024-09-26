@@ -4,7 +4,9 @@
 using namespace digital_twin;
 
 int main() {
-    Mqtt_client::test("Quoc Anh");
+    Mqtt_client client;
+
+    client.connect();
 
     return 0;
 }

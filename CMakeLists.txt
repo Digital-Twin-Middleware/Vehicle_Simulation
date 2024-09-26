@@ -7,6 +7,10 @@ set(SOURCES
     src/mqtt_client.cxx
 )
 
+find_package(PahoMqttCpp REQUIRED)
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+target_link_libraries(${PROJECT_NAME} PahoMqttCpp::paho-mqttpp3)
