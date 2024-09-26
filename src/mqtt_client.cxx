@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "mqtt_client.h"
+#include "mqtt/async_client.h"
 
 using namespace std;
 
