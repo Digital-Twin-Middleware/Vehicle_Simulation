@@ -1,46 +1,55 @@
 #include <string>
 #include <iostream>
-#include <mqtt/async_client.h>
+#include <mosquitto.h>
+#include <nlohmann/json.hpp>
 
 #include "digital_twin_client.h"
+#include "json_helper.h"
+
+using json = nlohmann::json;
 
 namespace digital_twin {
-    class digital_twin_client_callback : public virtual mqtt::callback {
-        public:
-            void connected(const std::string &cause) override {
-                std::cout << "Connected: " << cause << std::endl;
-            }
-
-            void connection_lost(const std::string &cause) override {
-                std::cout << "Connection lost: " << cause << std::endl;
-            }
-    };
 	
-	void init_mqtt_client(std::unique_ptr<mqtt::async_client> &mqtt_client) {
- 		auto server_address = "b09b50fd24a44677bcd84f0669c31841.s1.eu.hivemq.cloud";
-        auto client_id = "test_id";
+	void get_mosquitto_mqtt_version() {
+		int major = 0;
+		int minor = 0;
+		int revision = 0;
 		
- 		mqtt_client = std::unique_ptr<mqtt::async_client>(new mqtt::async_client(server_address, client_id));
+		mosquitto_lib_version(&major, &minor, &revision);
+		
+		std::cout << "Using Mosquitto MQTT version: " << major << "." << minor << "." << revision << "." << std::endl;
+	}
+	
+	void init_mqtt_client(struct mosquitto *mqtt_client, json config) {
+		mqtt_client = mosquitto_new("Test", true, NULL);
  	}
  	
- 	void init_connect_options(mqtt::connect_options &connect_options) {
- 		connect_options = mqtt::connect_options("vuong", "Quocanh01");
+ 	void init_connect_options() {
+ 		/*connect_options = mqtt::connect_options("vuong", "Quocanh01");
        	connect_options.set_keep_alive_interval(20);
        	connect_options.set_connect_timeout(5);
-        connect_options.set_clean_session(true);
+        connect_options.set_clean_session(true);*/
  	}
 	
 	digital_twin_client::digital_twin_client() {
-		init_mqtt_client(mqtt_client);
+		json config = json_helper::get_config();
 		
-		init_connect_options(connect_options);
+		if (config.empty()) exit(1);
+		
+		get_mosquitto_mqtt_version();
+		
+		mosquitto_lib_init();
+		
+		init_mqtt_client(mqtt_client, config);
+		
+		/*init_connect_options(connect_options);
 		
 		if (mqtt_client) {
 			std::cout << "Client is not null" << std::endl;
 			
 			std::cout << "User name: " << connect_options.get_user_name() << std::endl;
 			std::cout << "Password: " << connect_options.get_password() << std::endl;
-		}
+		}*/
 	}
 
     void digital_twin_client::connect() {
