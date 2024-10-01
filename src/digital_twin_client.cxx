@@ -20,8 +20,9 @@ namespace digital_twin {
 		std::cout << "Using Mosquitto MQTT version: " << major << "." << minor << "." << revision << "." << std::endl;
 	}
 	
-	void init_mqtt_client(struct mosquitto *mqtt_client, json config) {
-		mqtt_client = mosquitto_new("Test", true, NULL);
+	void init_mqtt_client(struct mosquitto *mqtt_client) {
+		std::string client_id = json_helper<std::string>::get_value_or_default("client_id", "Undefined_");
+		std::cout << client_id << std::endl;
  	}
  	
  	void init_connect_options() {
@@ -32,15 +33,11 @@ namespace digital_twin {
  	}
 	
 	digital_twin_client::digital_twin_client() {
-		json config = json_helper::get_config();
-		
-		if (config.empty()) exit(1);
-		
 		get_mosquitto_mqtt_version();
 		
 		mosquitto_lib_init();
 		
-		init_mqtt_client(mqtt_client, config);
+		init_mqtt_client(mqtt_client);
 		
 		/*init_connect_options(connect_options);
 		

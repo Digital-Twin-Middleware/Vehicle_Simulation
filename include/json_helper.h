@@ -5,13 +5,13 @@
 using json = nlohmann::json;
 
 namespace digital_twin {
+	template <typename T>
 	class json_helper 
 	{
 		private:
-			static std::string json_config_file_path;
 			static json config;
 		public:
-			static json get_config();
+			static T get_value_or_default(std::string key, T default_value);
 	};
 }
 
