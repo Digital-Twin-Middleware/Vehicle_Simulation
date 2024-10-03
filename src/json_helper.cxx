@@ -15,6 +15,12 @@ namespace digital_twin {
 	template<>
 	json json_helper<std::string>::config = json{}; 
 	
+	template<>
+	json json_helper<bool>::config = json{};
+	
+	template<>
+	json json_helper<int>::config = json{};
+	
 	const std::string json_config_file_path = "config.json";
 	
 	json initialize_config(std::string json_config_file_path) {
@@ -38,7 +44,6 @@ namespace digital_twin {
 		
 	template <typename T>
 	T json_helper<T>::get_value_or_default(std::string key, T default_value) {
-		std::cout << "Config: " << config << std::endl;
 		if (config.empty()) {
 			config = initialize_config(json_config_file_path);
 		}
@@ -57,4 +62,6 @@ namespace digital_twin {
 	
 	template class json_helper<std::string>;
 	template class json_helper<json>;
+	template class json_helper<bool>;
+	template class json_helper<int>;
 }

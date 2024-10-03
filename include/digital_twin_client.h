@@ -11,6 +11,7 @@ namespace digital_twin {
 			struct mosquitto *mqtt_client;    		
         public:
         	digital_twin_client();
+        	~digital_twin_client();
           	void connect();
             void disconnect();
     };

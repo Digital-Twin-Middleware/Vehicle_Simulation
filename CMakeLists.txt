@@ -8,6 +8,8 @@ set(SOURCES
     src/json_helper.cxx
 )
 
+set(CMAKE_BUILD_TYPE Debug)
+
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquitto REQUIRED)
@@ -22,4 +24,13 @@ target_link_libraries(${PROJECT_NAME} PkgConfig::Mosquitto)
 
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
 
-file(COPY ${CMAKE_SOURCE_DIR}/config.json DESTINATION ${CMAKE_BINARY_DIR})
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/config.json
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/config.json ${CMAKE_BINARY_DIR}/config.json
+    DEPENDS ${CMAKE_SOURCE_DIR}/config.json
+    COMMENT "Copying config.json to the build directory"
+)
+
+add_custom_target(copy_config ALL
+    DEPENDS ${CMAKE_BINARY_DIR}/config.json
+)

@@ -8,7 +8,7 @@ int main() {
 
     client.connect();
 	
-	//client.disconnect();
+	client.disconnect();
 	
     return 0;
 }
