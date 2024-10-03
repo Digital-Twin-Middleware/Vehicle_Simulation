@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <unistd.h>
 #include <sstream>
+#include <cstring>
 
 #include "digital_twin_client.h"
 #include "json_helper.h"
@@ -60,13 +61,18 @@ namespace digital_twin {
  		std::cerr << "Initialize mosquitto user error: " << mosquitto_strerror(rc) << std::endl;
 		exit(1);
  	}
-	
-	void clean_up(struct mosquitto *mqtt_client) {
-		if (mqtt_client) {
-        	mosquitto_destroy(mqtt_client);
-    	}
-    	mosquitto_lib_cleanup();
-	}
+ 	
+ 	void init_publish_setting(struct publish_setting &setting) {
+ 		std::string publish_topic = json_helper<std::string>::get_value_or_default("position_topic", "");
+    	int publish_qos_level = json_helper<int>::get_value_or_default("publish_qos_level", 0);
+    	bool publish_message_retain = json_helper<bool>::get_value_or_default("publish_message_retain", false);
+    	
+    	setting = {
+    		.topic = publish_topic,
+    		.qos_level = publish_qos_level,
+    		.retain = publish_message_retain
+    	};
+ 	}
 	
 	digital_twin_client::digital_twin_client() {
 		mqtt_client = nullptr;
@@ -78,6 +84,15 @@ namespace digital_twin {
 		init_mqtt_client(&mqtt_client);
 		
 		init_user(mqtt_client);
+		
+		init_publish_setting(setting);
+	}
+	
+	void clean_up(struct mosquitto *mqtt_client) {
+		if (mqtt_client) {
+        	mosquitto_destroy(mqtt_client);
+    	}
+    	mosquitto_lib_cleanup();
 	}
 	
 	digital_twin_client::~digital_twin_client() {
@@ -107,6 +122,15 @@ namespace digital_twin {
     	} else {
     		std::cout << "Fail to disconnect from the broker: " << mosquitto_strerror(rc) << std::endl;
     	}
+    }
+    
+    void digital_twin_client::publish(std::string message) {
+    	const char* new_message = message.c_str();
+    	
+    	int rc = mosquitto_publish(mqtt_client, nullptr, setting.topic.c_str(), strlen(new_message), new_message, setting.qos_level, setting.retain);
+    	if (rc == MOSQ_ERR_SUCCESS) return;
+    	
+    	std::cout << "Fail to publish messages: " << mosquitto_strerror(rc) << std::endl;
     }
 }
 
