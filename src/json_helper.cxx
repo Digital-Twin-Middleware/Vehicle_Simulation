@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 
 #include "json_helper.h"
+#include "utility_functions.h"
 
 using json = nlohmann::json;
 
@@ -48,7 +49,15 @@ namespace digital_twin {
 			config = initialize_config(json_config_file_path);
 		}
 		try {
-			return config.at(key).template get<T>();
+			std::vector<std::string> keys = utility_functions::split_text(key, '/');
+			json temp = config;
+			
+			for (std::string k : keys) {
+				if (temp.contains(k)) temp = temp.at(k);
+				else throw json::out_of_range::create(403, "Key not found: " + k, nullptr);
+			}
+			
+			return temp.get<T>();
 		}
 		catch (const nlohmann::json::out_of_range& e) {
 			std::cerr << "Key not found: " << e.what() << std::endl;

@@ -6,6 +6,8 @@ set(SOURCES
     src/main.cxx
     src/digital_twin_client.cxx
     src/json_helper.cxx
+    src/car_simulation.cxx
+    src/utility_functions.cxx
 )
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -34,3 +36,5 @@ add_custom_command(
 add_custom_target(copy_config ALL
     DEPENDS ${CMAKE_BINARY_DIR}/config.json
 )
+
+file(COPY ${CMAKE_SOURCE_DIR}/models/ DESTINATION ${CMAKE_BINARY_DIR}/models)
