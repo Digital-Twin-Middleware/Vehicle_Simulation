@@ -14,7 +14,10 @@ int main() {
     client.connect();
 	
 	car_simulation car;
-	car.register_car_data(client);
+	
+	int rc = car.register_car_data(client);
+	
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	
 	client.disconnect();
 	

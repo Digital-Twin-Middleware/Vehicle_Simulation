@@ -6,6 +6,8 @@
 #include <sstream>
 #include <cstring>
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include "digital_twin_client.h"
 #include "json_helper.h"
@@ -84,9 +86,10 @@ namespace digital_twin {
 	}
 	
 	void clean_up(struct mosquitto *mqtt_client) {
-		if (mqtt_client) {
-        	mosquitto_destroy(mqtt_client);
-    	}
+		mosquitto_loop_stop(mqtt_client, false);
+		
+		if (mqtt_client) mosquitto_destroy(mqtt_client);
+    	
     	mosquitto_lib_cleanup();
 	}
 	
@@ -100,10 +103,19 @@ namespace digital_twin {
 		int alive_time = json_helper<int>::get_value_or_default("connection/alive_time", 10);
 		
 		int rc = mosquitto_connect(mqtt_client, broker_address.c_str(), port, alive_time);
-		if (rc == MOSQ_ERR_SUCCESS) {
-			std::cout << "Successfully connected to the broker." << std::endl;
-		} else {
+		if (rc == MOSQ_ERR_SUCCESS) std::cout << "Successfully connected to the broker." << std::endl;
+		else {
 			std::cout << "Fail to connect to the broker: " << mosquitto_strerror(rc) << std::endl;
+			clean_up(mqtt_client);
+			exit(1);
+		}
+		
+		std::cout << "Establishing network traffic ..." << std::endl;
+		rc = mosquitto_loop_start(mqtt_client);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		if (rc == MOSQ_ERR_SUCCESS) std::cout << "Successfully established the network traffic." << std::endl;
+		else {
+			std::cout << "Fail to established the network traffic: " << mosquitto_strerror(rc) << std::endl;
 			clean_up(mqtt_client);
 			exit(1);
 		}
