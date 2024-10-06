@@ -16,6 +16,6 @@ namespace digital_twin {
 		
 		struct publish_setting setting = client.construct_publish_setting("registration_topic/topic", "registration_topic/qos", "registration_topic/retain");
 		
-		return client.publish_message(model_file_path, setting);
+		return client.publish_file(model_file_path, setting);
 	}
 }

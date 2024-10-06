@@ -34,12 +34,12 @@ namespace digital_twin {
 	}
 	
 	void init_mqtt_client(struct mosquitto **mqtt_client) {
-		std::string client_id_prefix = json_helper<std::string>::get_value_or_default("connection/client_id", "Undefined_");
+		std::string client_id = json_helper<std::string>::get_value_or_default("connection/client_id", "Undefined");
 		bool clean_session = json_helper<bool>::get_value_or_default("connection/clean_session", true);
 		
 		std::stringstream ss;
-		ss << client_id_prefix << getpid();
-		std::string client_id = ss.str();
+		ss << client_id << '_' << getpid();
+		client_id = ss.str();
 		
 		*mqtt_client = mosquitto_new(client_id.c_str(), clean_session, nullptr);
 		
@@ -123,6 +123,10 @@ namespace digital_twin {
     
      struct publish_setting digital_twin_client::construct_publish_setting(std::string topic_key, std::string qos_key, std::string retain_key) {
  		std::string publish_topic = json_helper<std::string>::get_value_or_default(topic_key, "");
+ 		std::stringstream ss;
+		ss << publish_topic << '/' << getpid();
+		publish_topic = ss.str();
+    	
     	int publish_qos_level = json_helper<int>::get_value_or_default(qos_key, 0);
     	bool publish_message_retain = json_helper<bool>::get_value_or_default(retain_key, false);
     	
@@ -179,7 +183,7 @@ namespace digital_twin {
 		if (rc != MOSQ_ERR_SUCCESS) std::cerr << "Fail to send EOF message: " << mosquitto_strerror(rc) << std::endl;
     	else std::cout << "File transfer complete!" << std::endl;
     	
-    	return rc;
+    	return MOSQ_ERR_SUCCESS;
     }
 }
 
