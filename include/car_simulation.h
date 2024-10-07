@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "digital_twin_client.h"
 
 namespace digital_twin {
@@ -29,8 +31,12 @@ namespace digital_twin {
 			struct vector_2 desired_direction;
 			float velocity;
 			float desired_velocity;
+			float acceleration;
 			bool has_started;
 			bool has_finished;
+			std::function<void(struct mosquitto_message)> message_received_event;
+			
+			void on_message_received(struct mosquitto_message message);
 		public:
 			car_simulation();
 			void register_data(digital_twin_client &client);

@@ -18,10 +18,6 @@ int main() {
 	
 	car.register_data(client);
 	
-	utility_functions::split_text("Hello/World", '/');
-	
-	utility_functions::set_timer();
-	
 	float delta_time = 0.f;
 	
 	while (1) {

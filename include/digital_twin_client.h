@@ -2,10 +2,12 @@
 
 #include <string>
 #include <memory>
+#include <vector>
+#include <functional>
 #include <mosquitto.h>
 
 namespace digital_twin {
-	struct publish_setting {
+	struct pubsub_setting {
 		std::string topic;
 		int qos_level;
 		bool retain;
@@ -16,13 +18,21 @@ namespace digital_twin {
     	private:
 			struct mosquitto *mqtt_client;
 			int file_publishing_chunk_size;
+			std::vector<std::function<void(struct mosquitto_message)>> message_received_callbacks;
+			
+			std::function<void(struct mosquitto*, void*, const struct mosquitto_message*)> message_received_event;
+			
+			void on_message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message);
         public:
         	digital_twin_client();
         	~digital_twin_client();
           	void connect();
             void disconnect();
-            struct publish_setting construct_publish_setting(std::string topic_key, std::string qos_key, std::string retain_key);
-            int publish_message(std::string message, struct publish_setting setting);
-            int publish_file(std::string file_path, struct publish_setting setting);
+            struct pubsub_setting construct_pubsub_setting(std::string topic_key, std::string qos_key, std::string retain_key);
+            int publish_message(std::string message, struct pubsub_setting setting);
+            int publish_file(std::string file_path, struct pubsub_setting setting);
+            int subscribe(struct pubsub_setting setting);
+            void register_message_received_callback(std::function<void(struct mosquitto_message)> callback);
+            void unregister_message_received_callback(std::function<void(struct mosquitto_message)> callback);
     };
 }

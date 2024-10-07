@@ -8,6 +8,9 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <vector>
+#include <functional>
+#include <algorithm>
 
 #include "digital_twin_client.h"
 #include "json_helper.h"
@@ -70,6 +73,12 @@ namespace digital_twin {
  		
  		file_publishing_chunk_size = chunk_size;
  	}
+ 	
+ 	void digital_twin_client::on_message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message) {
+ 		for (auto &callback : message_received_callbacks) {
+ 			callback(*message);
+ 		}
+ 	}
 	
 	digital_twin_client::digital_twin_client() {
 		mqtt_client = nullptr;
@@ -83,6 +92,14 @@ namespace digital_twin {
 		init_user(mqtt_client);
 		
 		init_publishing_setting(file_publishing_chunk_size);
+		
+		message_received_callbacks.clear();
+		
+		message_received_event = [this](mosquitto* mosq, void* userdata, const mosquitto_message* message) {
+            		this->on_message_received(mosq, userdata, message);
+            	};
+		
+		mosquitto_message_callback_set(mqtt_client, message_received_event.target<void(mosquitto*, void*, const struct mosquitto_message*)>());
 	}
 	
 	void clean_up(struct mosquitto *mqtt_client) {
@@ -121,16 +138,16 @@ namespace digital_twin {
 		}
     }
     
-     struct publish_setting digital_twin_client::construct_publish_setting(std::string topic_key, std::string qos_key, std::string retain_key) {
+     struct pubsub_setting digital_twin_client::construct_pubsub_setting(std::string topic_key, std::string qos_key, std::string retain_key) {
  		std::string publish_topic = json_helper<std::string>::get_value_or_default(topic_key, "");
  		std::stringstream ss;
 		ss << publish_topic << '/' << getpid();
 		publish_topic = ss.str();
     	
     	int publish_qos_level = json_helper<int>::get_value_or_default(qos_key, 0);
-    	bool publish_message_retain = json_helper<bool>::get_value_or_default(retain_key, false);
+    	bool publish_message_retain = (!retain_key.empty()) ? json_helper<bool>::get_value_or_default(retain_key, false) : false;
     	
-    	struct publish_setting setting = {publish_topic, publish_qos_level, publish_message_retain};
+    	struct pubsub_setting setting = {publish_topic, publish_qos_level, publish_message_retain};
     	
     	return setting;
  	}
@@ -145,7 +162,7 @@ namespace digital_twin {
     	}
     }
     
-    int digital_twin_client::publish_message(std::string message, struct publish_setting setting) {
+    int digital_twin_client::publish_message(std::string message, struct pubsub_setting setting) {
     	const char* new_message = message.c_str();
     	
     	int rc = mosquitto_publish(mqtt_client, nullptr, setting.topic.c_str(), strlen(new_message), new_message, setting.qos_level, setting.retain);
@@ -154,7 +171,7 @@ namespace digital_twin {
     	return rc;
     }
     
-    int digital_twin_client::publish_file(std::string file_path, struct publish_setting setting) {
+    int digital_twin_client::publish_file(std::string file_path, struct pubsub_setting setting) {
     	std::ifstream file(file_path, std::ios::binary | std::ios::ate);
     	if (!file) {
         	std::cerr << "Failed to open file: " << file_path << "." << std::endl;
@@ -180,6 +197,24 @@ namespace digital_twin {
     	else std::cout << "File transfer complete!" << std::endl;
     	
     	return MOSQ_ERR_SUCCESS;
+    }
+    
+    int digital_twin_client::subscribe(struct pubsub_setting setting) {
+    	int rc = mosquitto_subscribe(mqtt_client, nullptr, setting.topic.c_str(), setting.qos_level);
+    	if (rc != MOSQ_ERR_SUCCESS) std::cout << "Fail to subscribe to topic: " << mosquitto_strerror(rc) << std::endl;
+    	
+    	return rc;
+    }
+    
+    void digital_twin_client::register_message_received_callback(std::function<void(struct mosquitto_message)> callback) {
+    	message_received_callbacks.push_back(callback);
+    }
+    
+    void digital_twin_client::unregister_message_received_callback(std::function<void(struct mosquitto_message)> callback) {
+    	message_received_callbacks.erase(std::remove_if(message_received_callbacks.begin(), message_received_callbacks.end(),
+            [&](const std::function<void(struct mosquitto_message)> &registeredCallback) {
+                return registeredCallback.target<void(std::string)>() == callback.target<void(std::string)>();
+            }), message_received_callbacks.end());
     }
 }
 
