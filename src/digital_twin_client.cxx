@@ -130,11 +130,7 @@ namespace digital_twin {
     	int publish_qos_level = json_helper<int>::get_value_or_default(qos_key, 0);
     	bool publish_message_retain = json_helper<bool>::get_value_or_default(retain_key, false);
     	
-    	struct publish_setting setting = {
-    		.topic = publish_topic,
-    		.qos_level = publish_qos_level,
-    		.retain = publish_message_retain
-    	};
+    	struct publish_setting setting = {publish_topic, publish_qos_level, publish_message_retain};
     	
     	return setting;
  	}

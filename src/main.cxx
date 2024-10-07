@@ -5,6 +5,7 @@
 
 #include "digital_twin_client.h"
 #include "car_simulation.h"
+#include "utility_functions.h"
 
 using namespace digital_twin;
 
@@ -15,9 +16,19 @@ int main() {
 	
 	car_simulation car;
 	
-	int rc = car.register_car_data(client);
+	car.register_data(client);
 	
-	std::this_thread::sleep_for(std::chrono::seconds(5));
+	utility_functions::split_text("Hello/World", '/');
+	
+	utility_functions::set_timer();
+	
+	float delta_time = 0.f;
+	
+	while (1) {
+		delta_time = utility_functions::get_delta_time();
+		
+		car.run(delta_time);
+	}
 	
 	client.disconnect();
 	
