@@ -36,7 +36,7 @@ namespace digital_twin {
 		exit(1);
 	}
 	
-	void init_mqtt_client(struct mosquitto **mqtt_client) {
+	void init_mqtt_client(struct mosquitto **mqtt_client, digital_twin_client *client) {
 		std::string client_id = json_helper<std::string>::get_value_or_default("connection/client_id", "Undefined");
 		bool clean_session = json_helper<bool>::get_value_or_default("connection/clean_session", true);
 		
@@ -44,7 +44,7 @@ namespace digital_twin {
 		ss << client_id << '_' << getpid();
 		client_id = ss.str();
 		
-		*mqtt_client = mosquitto_new(client_id.c_str(), clean_session, nullptr);
+		*mqtt_client = mosquitto_new(client_id.c_str(), clean_session, static_cast<void*>(client));
 		
 		if (*mqtt_client) return;
 		
@@ -74,10 +74,10 @@ namespace digital_twin {
  		file_publishing_chunk_size = chunk_size;
  	}
  	
- 	void digital_twin_client::on_message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message) {
- 		for (auto &callback : message_received_callbacks) {
- 			callback(*message);
- 		}
+ 	void on_message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message) {
+ 		auto client = static_cast<digital_twin_client*>(user_data);
+ 		
+ 		client->invoke_message_received_event(*message);
  	}
 	
 	digital_twin_client::digital_twin_client() {
@@ -87,7 +87,7 @@ namespace digital_twin {
 		
 		init_mosquitto_lib();
 		
-		init_mqtt_client(&mqtt_client);
+		init_mqtt_client(&mqtt_client, this);
 		
 		init_user(mqtt_client);
 		
@@ -95,11 +95,7 @@ namespace digital_twin {
 		
 		message_received_callbacks.clear();
 		
-		message_received_event = [this](mosquitto* mosq, void* userdata, const mosquitto_message* message) {
-            		this->on_message_received(mosq, userdata, message);
-            	};
-		
-		mosquitto_message_callback_set(mqtt_client, message_received_event.target<void(mosquitto*, void*, const struct mosquitto_message*)>());
+		mosquitto_message_callback_set(mqtt_client, on_message_received);
 	}
 	
 	void clean_up(struct mosquitto *mqtt_client) {
@@ -215,6 +211,12 @@ namespace digital_twin {
             [&](const std::function<void(struct mosquitto_message)> &registeredCallback) {
                 return registeredCallback.target<void(std::string)>() == callback.target<void(std::string)>();
             }), message_received_callbacks.end());
+    }
+    
+    void digital_twin_client::invoke_message_received_event(struct mosquitto_message message) {
+    	for (auto &callback : message_received_callbacks) {
+ 			callback(message);
+ 		}
     }
 }
 
