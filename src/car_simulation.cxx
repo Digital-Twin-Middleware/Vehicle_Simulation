@@ -13,8 +13,7 @@ namespace digital_twin {
 		velocity = 0.f;
 		desired_velocity = 0.f;
 		acceleration = 10.f;
-		has_started = false;
-		has_finished = false;	
+		status = IDLE;	
 	}
 	
 	void process_commands(std::string command, car_simulation* car) {
@@ -44,7 +43,7 @@ namespace digital_twin {
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
-	void publish(digital_twin_client &client) {
+	void publish_car_model(digital_twin_client &client) {
 		std::string model_file_path = json_helper<std::string>::get_value_or_default("car_model/model_path", "");
 		
 		if (model_file_path.empty()) {
@@ -52,9 +51,32 @@ namespace digital_twin {
 			exit(1);
 		}
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic", "registration_topic/qos", "registration_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/model", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_file(model_file_path, setting);
+		if (rc != MOSQ_ERR_SUCCESS) exit(1);
+	}
+	
+	void publish_acceleration(digital_twin_client &client, float acceleration) 
+	{
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/acceleration", "registration_topic/qos", "registration_topic/retain");
+		
+		int rc = client.publish_message(std::to_string(acceleration), setting);
+		if (rc != MOSQ_ERR_SUCCESS) exit(1);
+	}
+	
+	void publish_gate(digital_twin_client &client, int gate) 
+	{
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/acceleration", "registration_topic/qos", "registration_topic/retain");
+		
+		int rc = client.publish_message(std::to_string(gate), setting);
+		if (rc != MOSQ_ERR_SUCCESS) exit(1);
+	}
+	
+	void publish_finish(digital_twin_client &client) {
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/ready", "registration_topic/qos", "registration_topic/retain");
+		
+		int rc = client.publish_message("1", setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
@@ -67,7 +89,11 @@ namespace digital_twin {
 		
 		subscribe(client);
 		
-		publish(client);
+		publish_car_model(client);
+		
+		publish_acceleration(client, acceleration);
+		
+		publish_finish(client);
 	}
 	
 	void turn(float delta_time) {
@@ -89,7 +115,7 @@ namespace digital_twin {
 	}
 	
 	void car_simulation::run(float delta_time) {
-		if (has_finished || !has_started) return;
+		if (status != car_status::RUNNING) return;
 			
 		if (std::abs(desired_direction.x - direction.x) > 0.001f || std::abs(desired_direction.z - direction.z) > 0.001f) turn(delta_time);
 			

@@ -24,6 +24,12 @@ namespace digital_twin {
 		}
 	};
 	
+	enum car_status {
+		IDLE,
+		RUNNING,
+		FINISH
+	};
+	
 	class car_simulation {
 		private:
 			struct vector_2 position;
@@ -32,8 +38,7 @@ namespace digital_twin {
 			float velocity;
 			float desired_velocity;
 			float acceleration;
-			bool has_started;
-			bool has_finished;
+			car_status status;
 			std::function<void(struct mosquitto_message)> message_received_event;
 			
 			void on_message_received(struct mosquitto_message message);
