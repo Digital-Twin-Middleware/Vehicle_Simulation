@@ -12,5 +12,6 @@ namespace digital_twin {
 			static void set_timer();
 			static float get_delta_time();
 			static std::vector<std::string> split_text(std::string text, char delimiter);
+			static int get_random_in_range(int min, int max);
 	};
 }

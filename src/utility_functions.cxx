@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <chrono>
+#include <random>
 
 #include "utility_functions.h"
 
@@ -30,5 +31,15 @@ namespace digital_twin {
 			tokens.push_back(token);
 		}
 		return tokens;
+	}
+	
+	int utility_functions::get_random_in_range(int min, int max) {
+		if (max < min) max = min;
+		
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> distr(min, max);
+		
+		return distr(gen);
 	}
 }

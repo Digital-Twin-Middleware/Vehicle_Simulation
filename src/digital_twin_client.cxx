@@ -158,7 +158,7 @@ namespace digital_twin {
     	}
     }
     
-    int digital_twin_client::publish_message(std::string message, struct pubsub_setting setting) {
+    int digital_twin_client::publish_message(std::string message, struct pubsub_setting setting) {	
     	const char* new_message = message.c_str();
     	
     	int rc = mosquitto_publish(mqtt_client, nullptr, setting.topic.c_str(), strlen(new_message), new_message, setting.qos_level, setting.retain);

@@ -23,7 +23,7 @@ int main() {
 	while (1) {
 		delta_time = utility_functions::get_delta_time();
 		
-		car.run(delta_time);
+		car.run(delta_time, client);
 	}
 	
 	client.disconnect();
