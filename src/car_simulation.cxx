@@ -30,14 +30,15 @@ namespace digital_twin {
 
 			car->position = {new_x, new_z};
 		}
-		else if (command == "direction") {
+		else if (command == "direction" || command == "set_direction") {
 			size_t slashPos = message.find('/');
 				
 			float new_x = std::stof(message.substr(0, slashPos));
 			float new_z = std::stof(message.substr(slashPos + 1));
 			
-			
 			car->desired_direction = {new_x, new_z};
+			
+			if (command == "set_direction") car->direction = {new_x, new_z};
 		}
 		else if (command == "status") {
 			int new_status = std::stoi(message);
@@ -156,7 +157,7 @@ namespace digital_twin {
 		position.x += delta_x;
 		position.z += delta_z;
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/velocity", "position_topic/qos/normal", "position_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/position", "position_topic/qos/normal", "position_topic/retain");
 		
 		std::stringstream ss;
 		ss << position.x << '/' << position.z;

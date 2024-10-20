@@ -32,7 +32,6 @@ namespace digital_twin {
 	
 	class car_simulation {
 		private:
-			struct vector_2 direction;
 			float velocity;
 			float acceleration;
 			std::function<void(struct mosquitto_message)> message_received_event;
@@ -41,6 +40,7 @@ namespace digital_twin {
 		public:
 			struct vector_2 position;
 			struct vector_2 desired_direction;
+			struct vector_2 direction;
 			float desired_velocity;
 			car_status status;
 			
