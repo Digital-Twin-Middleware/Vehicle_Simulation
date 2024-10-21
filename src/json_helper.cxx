@@ -22,6 +22,9 @@ namespace digital_twin {
 	template<>
 	json json_helper<int>::config = json{};
 	
+	template <>
+	json json_helper<float>::config = json{};
+	
 	const std::string json_config_file_path = "config.json";
 	
 	json initialize_config(std::string json_config_file_path) {
@@ -73,4 +76,5 @@ namespace digital_twin {
 	template class json_helper<json>;
 	template class json_helper<bool>;
 	template class json_helper<int>;
+	template class json_helper<float>;
 }

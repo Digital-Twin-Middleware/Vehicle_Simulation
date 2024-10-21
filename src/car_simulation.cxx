@@ -74,7 +74,7 @@ namespace digital_twin {
 	}
 	
 	void publish_car_model(digital_twin_client &client) {
-		std::string model_file_path = json_helper<std::string>::get_value_or_default("car_model/model_path", "");
+		std::string model_file_path = json_helper<std::string>::get_value_or_default("car_model/model_1/path", "");
 		
 		if (model_file_path.empty()) {
 			std::cerr << "Car model file path not found." << std::endl;
@@ -87,6 +87,15 @@ namespace digital_twin {
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
+	void publish_model_rotation_offset(digital_twin_client &client) {
+		float rotation_offset = json_helper<float>::get_value_or_default("car_model/model_1/rotation_offset", 0);
+		
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/rotation_offset", "registration_topic/qos", "registration_topic/retain");
+		
+		int rc = client.publish_message(std::to_string(rotation_offset), setting);
+		if (rc != MOSQ_ERR_SUCCESS) exit(1);
+	}
+	
 	void publish_acceleration(digital_twin_client &client, float acceleration) 
 	{
 		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/acceleration", "registration_topic/qos", "registration_topic/retain");
@@ -94,12 +103,30 @@ namespace digital_twin {
 		int rc = client.publish_message(std::to_string(acceleration), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
-	
-	void publish_gate(digital_twin_client &client, int gate) 
-	{
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/gate", "registration_topic/qos", "registration_topic/retain");
 		
-		int rc = client.publish_message(std::to_string(gate), setting);
+	int random_gate() {
+		int min_gate = json_helper<int>::get_value_or_default("gate/min_gate", 1);
+		int max_gate = json_helper<int>::get_value_or_default("gate/max_gate", 1);
+		
+		return utility_functions::get_random_in_range(min_gate, max_gate);
+	}
+	
+	void publish_gate(digital_twin_client &client) 
+	{
+		int start_gate = random_gate();
+		int end_gate = 0;
+		do {
+			end_gate = random_gate();
+		}
+		while (end_gate == start_gate);
+		
+		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/start_gate", "registration_topic/qos", "registration_topic/retain");
+		
+		int rc = client.publish_message(std::to_string(start_gate), setting);
+		if (rc != MOSQ_ERR_SUCCESS) exit(1);
+		
+		setting = client.construct_pubsub_setting("registration_topic/topic/end_gate", "registration_topic/qos", "registration_topic/retain");
+		rc = client.publish_message(std::to_string(end_gate), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
@@ -108,13 +135,6 @@ namespace digital_twin {
 		
 		int rc = client.publish_message("1", setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
-	}
-	
-	int random_gate() {
-		int min_gate = json_helper<int>::get_value_or_default("gate/min_gate", 1);
-		int max_gate = json_helper<int>::get_value_or_default("gate/max_gate", 1);
-		
-		return utility_functions::get_random_in_range(min_gate, max_gate);
 	}
 	
 	void car_simulation::register_data(digital_twin_client &client) {
@@ -128,9 +148,11 @@ namespace digital_twin {
 		
 		publish_car_model(client);
 		
+		publish_model_rotation_offset(client);
+		
 		publish_acceleration(client, acceleration);
 		
-		publish_gate(client, random_gate());
+		publish_gate(client);
 		
 		publish_finish(client);
 	}
