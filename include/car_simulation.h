@@ -34,6 +34,7 @@ namespace digital_twin {
 		private:
 			float velocity;
 			float acceleration;
+			float rotation_speed;
 			std::function<void(struct mosquitto_message)> message_received_event;
 			
 			void on_message_received(struct mosquitto_message message);

@@ -1,10 +1,13 @@
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 #include "car_simulation.h"
 #include "digital_twin_client.h"
 #include "json_helper.h"
 #include "utility_functions.h"
+
+#define PI 3.141
 
 namespace digital_twin {
 	car_simulation::car_simulation() {
@@ -14,6 +17,7 @@ namespace digital_twin {
 		velocity = 0.f;
 		desired_velocity = 0.f;
 		acceleration = 2.f;
+		rotation_speed = PI / 4.f;
 		status = IDLE;	
 	}
 	
@@ -157,8 +161,44 @@ namespace digital_twin {
 		publish_finish(client);
 	}
 	
-	void turn(float delta_time, digital_twin_client &client) {
+	float magnitude(struct vector_2 vector) {
+		return sqrt(vector.x * vector.x + vector.z * vector.z);
+	}
 	
+	void rotate(struct vector_2 &direction, float angle) {
+		direction.x = direction.x * cos(angle) - direction.z * sin(angle);
+		direction.z = direction.z * sin(angle) + direction.z * cos(angle);
+	}
+	
+	void turn(float delta_time, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, digital_twin_client &client) {
+		float dot_product = direction.x * desired_direction.x + direction.z * desired_direction.z;
+		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
+		
+		float target_angle = acos(dot_product);
+		float rotation_angle = rotation_speed * delta_time;
+		
+		std::string qos_key;
+		
+		if (rotation_angle >= target_angle) {
+			direction.x = desired_direction.x;
+			direction.z = desired_direction.z;
+			
+			qos_key = "position_topic/qos/important";
+		}
+		else {
+			if (cross_product < 0) rotate(direction, -rotation_angle);
+			else rotate(direction, rotation_angle);
+			
+			qos_key = "position_topic/qos/normal";
+		}
+		
+		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/direction", qos_key, "position_topic/retain");
+		
+		std::stringstream ss;
+		ss << direction.x << '/' << direction.z;
+		std::string message = ss.str();
+		
+		client.publish_message(message, setting);
 	}
 	
 	void accelerate(float &velocity, float desired_velocity, float acceleration, float delta_time, digital_twin_client &client) {
@@ -191,7 +231,7 @@ namespace digital_twin {
 	void car_simulation::run(float delta_time, digital_twin_client &client) {
 		if (status != car_status::RUNNING) return;
 			
-		if (std::abs(desired_direction.x - direction.x) > 0.001f || std::abs(desired_direction.z - direction.z) > 0.001f) turn(delta_time, client);
+		if (magnitude((struct vector_2){desired_direction.x - direction.x, desired_direction.z - direction.z}) > 0.001f) turn(delta_time, rotation_speed, direction, desired_direction, client);
 			
 		if (std::abs(desired_velocity - velocity) > 0.001f) accelerate(velocity, desired_velocity, acceleration, delta_time, client);
 			
