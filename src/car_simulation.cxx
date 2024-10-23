@@ -7,8 +7,6 @@
 #include "json_helper.h"
 #include "utility_functions.h"
 
-#define PI 3.141
-
 namespace digital_twin {
 	car_simulation::car_simulation() {
 		position = {0.f, 0.f};
@@ -17,7 +15,7 @@ namespace digital_twin {
 		velocity = 0.f;
 		desired_velocity = 0.f;
 		acceleration = 2.f;
-		rotation_speed = PI / 4.f;
+		rotation_speed = 1.f;
 		status = IDLE;	
 	}
 	
@@ -35,6 +33,7 @@ namespace digital_twin {
 			car->position = {new_x, new_z};
 		}
 		else if (command == "direction" || command == "set_direction") {
+			
 			size_t slashPos = message.find('/');
 				
 			float new_x = std::stof(message.substr(0, slashPos));
@@ -43,6 +42,7 @@ namespace digital_twin {
 			car->desired_direction = {new_x, new_z};
 			
 			if (command == "set_direction") car->direction = {new_x, new_z};
+			
 		}
 		else if (command == "status") {
 			int new_status = std::stoi(message);
@@ -166,11 +166,14 @@ namespace digital_twin {
 	}
 	
 	void rotate(struct vector_2 &direction, float angle) {
-		direction.x = direction.x * cos(angle) - direction.z * sin(angle);
-		direction.z = direction.z * sin(angle) + direction.z * cos(angle);
+		struct vector_2 original_direction = direction;
+		
+		direction.x = original_direction.x * cos(angle) - original_direction.z * sin(angle);
+		direction.z = original_direction.x * sin(angle) + original_direction.z * cos(angle);
 	}
 	
 	void turn(float delta_time, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, digital_twin_client &client) {
+		
 		float dot_product = direction.x * desired_direction.x + direction.z * desired_direction.z;
 		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
 		
