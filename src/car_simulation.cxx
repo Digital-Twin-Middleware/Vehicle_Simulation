@@ -13,16 +13,14 @@ namespace digital_twin {
 		direction = {0.f, 0.f};
 		desired_direction = {0.f, 0.f};
 		velocity = 0.f;
-		desired_velocity = 0.f;
-		acceleration = 2.f;
-		rotation_speed = 1.f;
+		is_turning = false;
 		status = IDLE;	
 	}
 	
 	void process_commands(std::string command, std::string message, car_simulation* car) {
 		if (command == "velocity") {
 			float new_velocity = std::stof(message);
-			car->desired_velocity = new_velocity;
+			car->velocity = new_velocity;
 		}
 		else if (command == "position") {
 			size_t slashPos = message.find('/');
@@ -42,13 +40,14 @@ namespace digital_twin {
 			car->desired_direction = {new_x, new_z};
 			
 			if (command == "set_direction") car->direction = {new_x, new_z};
+			else car->is_turning = true;
 			
 		}
 		else if (command == "status") {
 			int new_status = std::stoi(message);
 			car->status = static_cast<car_status>(new_status); 
 		}
-		else std::cout << "Command not found: " << command << "." << std::endl;
+		else std::cerr << "Command not found: " << command << "." << std::endl;
 	}
 	
 	void car_simulation::on_message_received(struct mosquitto_message message) {
@@ -99,14 +98,6 @@ namespace digital_twin {
 		int rc = client.publish_message(std::to_string(rotation_offset), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
-	
-	void publish_acceleration(digital_twin_client &client, float acceleration) 
-	{
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/acceleration", "registration_topic/qos", "registration_topic/retain");
-		
-		int rc = client.publish_message(std::to_string(acceleration), setting);
-		if (rc != MOSQ_ERR_SUCCESS) exit(1);
-	}
 		
 	int random_gate() {
 		int min_gate = json_helper<int>::get_value_or_default("gate/min_gate", 1);
@@ -154,15 +145,9 @@ namespace digital_twin {
 		
 		publish_model_rotation_offset(client);
 		
-		publish_acceleration(client, acceleration);
-		
 		publish_gate(client);
 		
 		publish_finish(client);
-	}
-	
-	float magnitude(struct vector_2 vector) {
-		return sqrt(vector.x * vector.x + vector.z * vector.z);
 	}
 	
 	void rotate(struct vector_2 &direction, float angle) {
@@ -172,19 +157,21 @@ namespace digital_twin {
 		direction.z = original_direction.x * sin(angle) + original_direction.z * cos(angle);
 	}
 	
-	void turn(float delta_time, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, digital_twin_client &client) {
+	void turn(float delta_time, float velocity, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client) {
 		
 		float dot_product = direction.x * desired_direction.x + direction.z * desired_direction.z;
 		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
 		
 		float target_angle = acos(dot_product);
-		float rotation_angle = rotation_speed * delta_time;
+		float rotation_angle = (velocity / 10) * delta_time;
 		
 		std::string qos_key;
 		
 		if (rotation_angle >= target_angle) {
 			direction.x = desired_direction.x;
 			direction.z = desired_direction.z;
+			
+			is_turning = false;
 			
 			qos_key = "position_topic/qos/important";
 		}
@@ -202,17 +189,6 @@ namespace digital_twin {
 		std::string message = ss.str();
 		
 		client.publish_message(message, setting);
-	}
-	
-	void accelerate(float &velocity, float desired_velocity, float acceleration, float delta_time, digital_twin_client &client) {
-		float delta_velocity = acceleration * delta_time;
-		float new_velocity = velocity + delta_velocity;
-		velocity = std::min(new_velocity, desired_velocity);
-		
-		std::string qos_key = std::abs(desired_velocity - velocity) > 0.001f ? "position_topic/qos/normal" : "position_topic/qos/important";
-		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/velocity", qos_key, "position_topic/retain");
-		
-		client.publish_message(std::to_string(velocity), setting);
 	}
 	
 	void move(struct vector_2 &position, struct vector_2 direction, float velocity, float delta_time, digital_twin_client &client) {
@@ -234,9 +210,7 @@ namespace digital_twin {
 	void car_simulation::run(float delta_time, digital_twin_client &client) {
 		if (status != car_status::RUNNING) return;
 			
-		if (magnitude((struct vector_2){desired_direction.x - direction.x, desired_direction.z - direction.z}) > 0.001f) turn(delta_time, rotation_speed, direction, desired_direction, client);
-			
-		if (std::abs(desired_velocity - velocity) > 0.001f) accelerate(velocity, desired_velocity, acceleration, delta_time, client);
+		if (is_turning) turn(delta_time, velocity, direction, desired_direction, is_turning, client);
 			
 		move(position, direction, velocity, delta_time, client);
 	}
