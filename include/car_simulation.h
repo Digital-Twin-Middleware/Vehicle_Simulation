@@ -27,18 +27,24 @@ namespace digital_twin {
 	enum car_status {
 		IDLE = 0,
 		RUNNING = 1,
-		FINISH = 2
+		WAITING = 2,
+		FINISH = 3,
 	};
 	
 	class car_simulation {
 		private:
+			float rotation_speed;	
+		
 			std::function<void(struct mosquitto_message)> message_received_event;
 			
 			void on_message_received(struct mosquitto_message message);
 		public:
+			int car_model_id;
 			struct vector_2 position;
 			struct vector_2 desired_direction;
 			struct vector_2 direction;
+			struct vector_2 next_intersection;
+			struct vector_2 car_front_offset;
 			float velocity;
 			bool is_turning;
 			car_status status;
