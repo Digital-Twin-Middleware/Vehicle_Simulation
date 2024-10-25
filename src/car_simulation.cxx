@@ -8,22 +8,9 @@
 #include "utility_functions.h"
 
 namespace digital_twin {
-	car_simulation::car_simulation() {
-		car_model_id = 1;
-		position = {0.f, 0.f};
-		direction = {0.f, 0.f};
-		desired_direction = {0.f, 0.f};
-		next_intersection = {0.f, 0.f};
-		velocity = 0.f;
-		rotation_speed = 1.0f;
-		is_turning = false;
-		status = IDLE;	
-	}
-	
 	void set_moving_straight_velocity(float &velocity) {
 		velocity = json_helper<float>::get_value_or_default("velocity/straight", 0.f);
 	}
-	
 	
 	std::string get_car_key(int car_model_id, std::string suffix) {
 		std::stringstream ss;
@@ -33,32 +20,30 @@ namespace digital_twin {
 		return car_model_key;
 	}
 	
+	car_simulation::car_simulation() {
+		car_model_id = 1;
+		position = {0.f, 0.f};
+		direction = {0.f, 0.f};
+		desired_direction = {0.f, 0.f};
+		next_intersection = {0.f, 0.f};
+		rotation_speed = json_helper<float>::get_value_or_default("rotation_speed", 0.f);
+		set_moving_straight_velocity(velocity);
+		
+		std::string car_key = get_car_key(car_model_id, "/car_front_offset");
+		car_front_offset = json_helper<float>::get_value_or_default(car_key, 0.f);
+		
+		is_turning = false;
+		status = IDLE;	
+	}
+	
 	float magnitude_vector(struct vector_2 vector) {
 		return vector.x * vector.x + vector.z * vector.z;
 	}
 	
-	float angle_between_two_vectors(struct vector_2 first_vector, struct vector_2 second_vector) {
+	float angle_between_two_normalized_vectors(struct vector_2 first_vector, struct vector_2 second_vector) {
 		float dot_product = first_vector.x * second_vector.x + first_vector.z * second_vector.z;
 		
-		float magnitude_first_vector = magnitude_vector(first_vector);
-		float magnitude_second_vector = magnitude_vector(second_vector);
-		
-		return acos(dot_product / (magnitude_first_vector * magnitude_second_vector));
-	}
-	
-	void set_car_front_offset(int car_model_id, struct vector_2 &car_front_offset, struct vector_2 direction) {
-		std::string car_front_offset_x_key = get_car_key(car_model_id, "/car_front_offset_x");
-		float normal_car_front_offset_x = json_helper<float>::get_value_or_default(car_front_offset_x_key, 0.f);
-		
-		std::string car_front_offset_z_key = get_car_key(car_model_id, "/car_front_offset_z");
-		float normal_car_front_offset_z = json_helper<float>::get_value_or_default(car_front_offset_z_key, 0.f);
-		
-		struct vector_2 normal_car_front_offset {normal_car_front_offset_x, normal_car_front_offset_z};
-		
-		float angle = angle_between_two_vectors(normal_car_front_offset, direction);
-		
-		car_front_offset.x = normal_car_front_offset.x * cos(angle) - normal_car_front_offset.z * sin(angle);
-		car_front_offset.z = normal_car_front_offset.x * sin(angle) + normal_car_front_offset.z * cos(angle);
+		return acos(dot_product);
 	}
 	
 	void process_commands(std::string command, std::string message, car_simulation* car) {
@@ -82,7 +67,6 @@ namespace digital_twin {
 			
 			if (command == "set_direction") {
 				car->direction = {new_x, new_z};
-				set_car_front_offset(car->car_model_id, car->car_front_offset, car->direction);
 			}
 			else {
 				if (magnitude_vector((struct vector_2){car->direction.x - new_x, car->direction.z - new_z}) < 0.01f) {
@@ -92,7 +76,6 @@ namespace digital_twin {
 					car->is_turning = true;
 					float cross_product = car->direction.x * car->desired_direction.z - car->direction.z * car->desired_direction.x;
 					car->velocity = cross_product < 0 ? json_helper<float>::get_value_or_default("velocity/right", 0.f) : json_helper<float>::get_value_or_default("velocity/left", 0.f);
-					set_moving_straight_velocity(car->velocity);
 				}
 			}
 		}
@@ -221,9 +204,9 @@ namespace digital_twin {
 	}
 	
 	
-	void turn(int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, struct vector_2 &car_front_offset, bool &is_turning, digital_twin_client &client) {
+	void turn(int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client) {
 		
-		float target_angle = angle_between_two_vectors(direction, desired_direction);
+		float target_angle = angle_between_two_normalized_vectors(direction, desired_direction);
 		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
 		
 		float rotation_angle = rotation_speed * delta_time;
@@ -236,7 +219,6 @@ namespace digital_twin {
 			
 			is_turning = false;
 			set_moving_straight_velocity(velocity);
-			set_car_front_offset(car_model_id, car_front_offset, direction);
 			qos_key = "position_topic/qos/important";
 		}
 		else {
@@ -271,8 +253,9 @@ namespace digital_twin {
 		client.publish_message(message, setting);
 	}
 	
-	void check_intersection(struct vector_2 position, struct vector_2 car_front_offset, struct vector_2 next_intersection, car_status &status) {
-		bool is_collide = (next_intersection.x - (position.x + car_front_offset.x)) < 0.5f && (next_intersection.z - (position.z + car_front_offset.z)) < 0.5f;
+	void check_intersection(float car_front_offset, struct vector_2 position, struct vector_2 direction, struct vector_2 next_intersection, car_status &status) {
+		
+		bool is_collide = std::abs((next_intersection.x - (position.x + car_front_offset * direction.x))) < 0.5f && std::abs((next_intersection.z - (position.z + car_front_offset * direction.z))) < 0.5f;
 		
 		if (is_collide) status = car_status::WAITING;
 	}
@@ -281,11 +264,11 @@ namespace digital_twin {
 		
 		if (status != car_status::RUNNING) return;
 			
-		if (is_turning) turn(car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, car_front_offset, is_turning, client);
+		if (is_turning) turn(car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
+		
+		check_intersection(car_front_offset, position, direction, next_intersection, status);
 		
 		move(position, direction, velocity, delta_time, client);
-		
-		check_intersection(position, car_front_offset, next_intersection, status);
 	}
 	
 }
