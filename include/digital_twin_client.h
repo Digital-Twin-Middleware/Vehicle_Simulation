@@ -21,8 +21,7 @@ namespace digital_twin {
 			std::vector<std::function<void(struct mosquitto_message)>> message_received_callbacks;	
 			void message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message);
         public:
-        	digital_twin_client();
-        	~digital_twin_client();
+        	digital_twin_client(int id);
           	void connect();
             void disconnect();
             struct pubsub_setting construct_pubsub_setting(int id, std::string topic_key, std::string qos_key, std::string retain_key);

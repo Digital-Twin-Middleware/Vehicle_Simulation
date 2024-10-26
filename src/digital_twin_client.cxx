@@ -52,8 +52,14 @@ namespace digital_twin {
 		exit(1);
  	}
  	
- 	void init_will(struct mosquitto *mqtt_client) {
- 		//TODO Later
+ 	void init_will(struct mosquitto *mqtt_client, int id) {
+ 		std::string last_will_topic = json_helper<std::string>::get_value_or_default("last_will_topic/topic", "");
+ 		bool last_will_retain = json_helper<bool>::get_value_or_default("last_will_topic/retain", false);
+ 		int last_will_qos = json_helper<int>::get_value_or_default("last_will_topic/qos", 0);
+ 		
+ 		const char* last_will_message = std::to_string(id).c_str();
+ 		
+ 		mosquitto_will_set(mqtt_client, last_will_topic.c_str(), strlen(last_will_message), last_will_message, last_will_qos, last_will_retain);
  	}
  	
  	void init_user(struct mosquitto *mqtt_client) {
@@ -80,7 +86,7 @@ namespace digital_twin {
  		client->invoke_message_received_event(*message);
  	}
 	
-	digital_twin_client::digital_twin_client() {
+	digital_twin_client::digital_twin_client(int id) {
 		mqtt_client = nullptr;
 		
 		get_mosquitto_mqtt_version();
@@ -93,6 +99,8 @@ namespace digital_twin {
 		
 		init_publishing_setting(file_publishing_chunk_size);
 		
+		init_will(mqtt_client, id);
+		
 		message_received_callbacks.clear();
 		
 		mosquitto_message_callback_set(mqtt_client, on_message_received);
@@ -104,10 +112,6 @@ namespace digital_twin {
 		if (mqtt_client) mosquitto_destroy(mqtt_client);
     	
     	mosquitto_lib_cleanup();
-	}
-	
-	digital_twin_client::~digital_twin_client() {
-    	clean_up(mqtt_client);
 	}
 
     void digital_twin_client::connect() {
@@ -150,6 +154,7 @@ namespace digital_twin {
  	}
     
     void digital_twin_client::disconnect() {
+    	std::cout << "Disconnect trigger." << std::endl;
     	int rc = mosquitto_disconnect(mqtt_client);
     	if (rc == MOSQ_ERR_SUCCESS) {
     		clean_up(mqtt_client);

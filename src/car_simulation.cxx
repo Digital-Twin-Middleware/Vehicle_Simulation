@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <atomic>
 
 #include "car_simulation.h"
 #include "digital_twin_client.h"
@@ -261,11 +262,11 @@ namespace digital_twin {
 		if (is_collide) status = car_status::WAITING;
 	}
 	
-	void car_simulation::run(digital_twin_client &client) {
+	void car_simulation::run(digital_twin_client &client,  std::atomic<bool>& running) {
 		
 		utility_functions delta_time_manager;
 		
-		while (status != car_status::FINISH) {
+		while (status != car_status::FINISH && running.load()) {
 		
 			float delta_time = delta_time_manager.get_delta_time();
 		

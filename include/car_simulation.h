@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <atomic>
 
 #include "digital_twin_client.h"
 
@@ -50,9 +51,8 @@ namespace digital_twin {
 			bool is_turning;
 			car_status status;
 			
-			
 			car_simulation(int car_id);
 			void register_data(digital_twin_client &client);
-			void run(digital_twin_client &client);
+			void run(digital_twin_client &client, std::atomic<bool>& running);
 	};
 }
