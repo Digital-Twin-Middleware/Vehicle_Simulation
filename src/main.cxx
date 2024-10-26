@@ -14,7 +14,7 @@ int main() {
 
     client.connect();
 	
-	car_simulation car;
+	car_simulation car(1);
 	
 	car.register_data(client);
 		

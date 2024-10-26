@@ -33,6 +33,7 @@ namespace digital_twin {
 	
 	class car_simulation {
 		private:
+			int car_id;
 			float rotation_speed;
 			float car_front_offset;
 			
@@ -50,7 +51,7 @@ namespace digital_twin {
 			car_status status;
 			
 			
-			car_simulation();
+			car_simulation(int car_id);
 			void register_data(digital_twin_client &client);
 			void run(digital_twin_client &client);
 	};

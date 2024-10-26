@@ -20,7 +20,8 @@ namespace digital_twin {
 		return car_model_key;
 	}
 	
-	car_simulation::car_simulation() {
+	car_simulation::car_simulation(int car_id) {
+		this->car_id = car_id;
 		car_model_id = 1;
 		position = {0.f, 0.f};
 		direction = {0.f, 0.f};
@@ -113,14 +114,14 @@ namespace digital_twin {
 		client.register_message_received_callback(message_received_event);
 	}
 	
-	void subscribe(digital_twin_client &client) {
-		struct pubsub_setting setting = client.construct_pubsub_setting("command_topic/topic", "command_topic/qos", "");
+	void subscribe(int car_id, digital_twin_client &client) {
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "command_topic/topic", "command_topic/qos", "");
 		
 		int rc = client.subscribe(setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
-	void publish_car_model(int car_model_id, digital_twin_client &client) {
+	void publish_car_model(int car_id, int car_model_id, digital_twin_client &client) {
 		std::string car_model_key = get_car_key(car_model_id, "/path");
 		std::string model_file_path = json_helper<std::string>::get_value_or_default(car_model_key, "");
 		
@@ -129,17 +130,17 @@ namespace digital_twin {
 			exit(1);
 		}
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/model", "registration_topic/qos", "registration_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/model", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_file(model_file_path, setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
-	void publish_model_rotation_offset(int car_model_id, digital_twin_client &client) {
+	void publish_model_rotation_offset(int car_id, int car_model_id, digital_twin_client &client) {
 		std::string car_rotation_offset_key = get_car_key(car_model_id, "/rotation_offset");
 		float rotation_offset = json_helper<float>::get_value_or_default(car_rotation_offset_key, 0);
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/rotation_offset", "registration_topic/qos", "registration_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/rotation_offset", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_message(std::to_string(rotation_offset), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
@@ -152,7 +153,7 @@ namespace digital_twin {
 		return utility_functions::get_random_in_range(min_gate, max_gate);
 	}
 	
-	void publish_gate(digital_twin_client &client) 
+	void publish_gate(int car_id, digital_twin_client &client) 
 	{
 		int start_gate = random_gate();
 		int end_gate = 0;
@@ -161,18 +162,18 @@ namespace digital_twin {
 		}
 		while (end_gate == start_gate);
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/start_gate", "registration_topic/qos", "registration_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/start_gate", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_message(std::to_string(start_gate), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 		
-		setting = client.construct_pubsub_setting("registration_topic/topic/end_gate", "registration_topic/qos", "registration_topic/retain");
+		setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/end_gate", "registration_topic/qos", "registration_topic/retain");
 		rc = client.publish_message(std::to_string(end_gate), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 	
-	void publish_finish(digital_twin_client &client) {
-		struct pubsub_setting setting = client.construct_pubsub_setting("registration_topic/topic/ready", "registration_topic/qos", "registration_topic/retain");
+	void publish_finish(int car_id, digital_twin_client &client) {
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/ready", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_message("1", setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
@@ -185,15 +186,15 @@ namespace digital_twin {
         
         set_callback(client, message_received_event);
 		
-		subscribe(client);
+		subscribe(car_id, client);
 		
-		publish_car_model(car_model_id, client);
+		publish_car_model(car_id, car_model_id, client);
 		
-		publish_model_rotation_offset(car_model_id, client);
+		publish_model_rotation_offset(car_id, car_model_id, client);
 		
-		publish_gate(client);
+		publish_gate(car_id, client);
 		
-		publish_finish(client);
+		publish_finish(car_id, client);
 	}
 	
 	void rotate(struct vector_2 &direction, float angle) {
@@ -204,7 +205,7 @@ namespace digital_twin {
 	}
 	
 	
-	void turn(int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client) {
+	void turn(int car_id, int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client) {
 		
 		float target_angle = angle_between_two_normalized_vectors(direction, desired_direction);
 		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
@@ -228,7 +229,7 @@ namespace digital_twin {
 			qos_key = "position_topic/qos/normal";
 		}
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/direction", qos_key, "position_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "position_topic/topic/direction", qos_key, "position_topic/retain");
 		
 		std::stringstream ss;
 		ss << direction.x << '/' << direction.z;
@@ -237,14 +238,14 @@ namespace digital_twin {
 		client.publish_message(message, setting);
 	}
 	
-	void move(struct vector_2 &position, struct vector_2 direction, float velocity, float delta_time, digital_twin_client &client) {
+	void move(int car_id, struct vector_2 &position, struct vector_2 direction, float velocity, float delta_time, digital_twin_client &client) {
 		float delta_x = direction.x * velocity * delta_time;
 		float delta_z = direction.z * velocity * delta_time;
 		
 		position.x += delta_x;
 		position.z += delta_z;
 		
-		struct pubsub_setting setting = client.construct_pubsub_setting("position_topic/topic/position", "position_topic/qos/normal", "position_topic/retain");
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "position_topic/topic/position", "position_topic/qos/normal", "position_topic/retain");
 		
 		std::stringstream ss;
 		ss << position.x << '/' << position.z;
@@ -270,11 +271,11 @@ namespace digital_twin {
 		
 			if (status != car_status::RUNNING) continue;
 			
-			if (is_turning) turn(car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
+			if (is_turning) turn(car_id, car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
 		
 			check_intersection(car_front_offset, position, direction, next_intersection, status);
 		
-			move(position, direction, velocity, delta_time, client);
+			move(car_id, position, direction, velocity, delta_time, client);
 		}
 	}
 	

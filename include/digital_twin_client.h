@@ -25,7 +25,7 @@ namespace digital_twin {
         	~digital_twin_client();
           	void connect();
             void disconnect();
-            struct pubsub_setting construct_pubsub_setting(std::string topic_key, std::string qos_key, std::string retain_key);
+            struct pubsub_setting construct_pubsub_setting(int id, std::string topic_key, std::string qos_key, std::string retain_key);
             int publish_message(std::string message, struct pubsub_setting setting);
             int publish_file(std::string file_path, struct pubsub_setting setting);
             int subscribe(struct pubsub_setting setting);
