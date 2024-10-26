@@ -7,9 +7,7 @@
 #include "utility_functions.h"
 
 namespace digital_twin {
-    std::chrono::steady_clock::time_point utility_functions::current_time = std::chrono::steady_clock::now();
-
-	void utility_functions::set_timer() {
+	utility_functions::utility_functions() {
 		current_time = std::chrono::steady_clock::now();
 	}
 	

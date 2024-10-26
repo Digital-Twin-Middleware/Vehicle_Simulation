@@ -260,15 +260,22 @@ namespace digital_twin {
 		if (is_collide) status = car_status::WAITING;
 	}
 	
-	void car_simulation::run(float delta_time, digital_twin_client &client) {
+	void car_simulation::run(digital_twin_client &client) {
 		
-		if (status != car_status::RUNNING) return;
+		utility_functions delta_time_manager;
+		
+		while (status != car_status::FINISH) {
+		
+			float delta_time = delta_time_manager.get_delta_time();
+		
+			if (status != car_status::RUNNING) continue;
 			
-		if (is_turning) turn(car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
+			if (is_turning) turn(car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
 		
-		check_intersection(car_front_offset, position, direction, next_intersection, status);
+			check_intersection(car_front_offset, position, direction, next_intersection, status);
 		
-		move(position, direction, velocity, delta_time, client);
+			move(position, direction, velocity, delta_time, client);
+		}
 	}
 	
 }

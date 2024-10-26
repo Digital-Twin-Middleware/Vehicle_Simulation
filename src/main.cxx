@@ -17,14 +17,8 @@ int main() {
 	car_simulation car;
 	
 	car.register_data(client);
-	
-	float delta_time = 0.f;
-	
-	while (1) {
-		delta_time = utility_functions::get_delta_time();
 		
-		car.run(delta_time, client);
-	}
+	car.run(client);
 	
 	client.disconnect();
 	

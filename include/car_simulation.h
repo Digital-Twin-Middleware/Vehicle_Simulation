@@ -52,6 +52,6 @@ namespace digital_twin {
 			
 			car_simulation();
 			void register_data(digital_twin_client &client);
-			void run(float delta_time, digital_twin_client &client);
+			void run(digital_twin_client &client);
 	};
 }
