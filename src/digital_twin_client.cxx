@@ -154,7 +154,6 @@ namespace digital_twin {
  	}
     
     void digital_twin_client::disconnect() {
-    	std::cout << "Disconnect trigger." << std::endl;
     	int rc = mosquitto_disconnect(mqtt_client);
     	if (rc == MOSQ_ERR_SUCCESS) {
     		clean_up(mqtt_client);

@@ -1,0 +1,64 @@
+{
+	"simulation_max": 5,
+	"connection": {
+		"client_id": "Vehicle",
+		"clean_session": true,
+		"username": "quanh2k",
+		"password": "Quocanh01",
+		"broker_address": "192.168.1.50",
+		"port": 1883,
+		"alive_time": 10
+	},
+	"registration_topic": {
+		"topic": {
+			"model": "registration/model",
+			"rotation_offset": "registration/rotation_offset",
+			"start_gate": "registration/start_gate",
+			"end_gate": "registration/end_gate",
+			"ready": "registration/ready"
+		},
+		"qos": 2,
+		"retain": false
+	},
+	"position_topic": {
+		"topic":  {
+			"position": "position/position",
+			"direction": "position/direction",
+			"velocity": "position/velocity"
+		},
+		"qos": {
+			"normal": 0,
+			"important": 2
+		},
+		"retain": false
+	},
+	"command_topic": {
+		"topic": "command/+",
+		"qos": 2
+	},
+	"last_will_topic": {
+		"topic": "disconnect",
+		"retain": false,
+		"qos": 2
+	},
+	"publish_setting": {
+		"file_publishing_chunk_size": 1024	
+	},
+	"car_model": {
+		"model_1": {
+			"path": "models/car.glb",
+			"rotation_offset": -90,
+			"car_front_offset": 0.5
+		}
+	},
+	"gate": {
+		"min_gate": 1,
+		"max_gate": 12
+	},
+	"velocity": {
+		"straight": 10,
+		"left": 8.5,
+		"right": 13.5
+	},
+	"rotation_speed": 1
+}
