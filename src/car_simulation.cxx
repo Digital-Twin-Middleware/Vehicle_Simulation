@@ -13,26 +13,30 @@ namespace digital_twin {
 		velocity = json_helper<float>::get_value_or_default("velocity/straight", 0.f);
 	}
 	
-	std::string get_car_key(int car_model_id, std::string suffix) {
+	std::string get_car_key(int car_model_id) {
 		std::stringstream ss;
-		ss << "car_model/model_" << car_model_id << suffix;
+		ss << "car_model_path/model_" << car_model_id;
 		std::string car_model_key = ss.str();
 		
 		return car_model_key;
 	}
 	
+	int get_random_car_model() {
+		int min_model = json_helper<int>::get_value_or_default("car_model/min_model", 1);
+		int max_model = json_helper<int>::get_value_or_default("car_model/max_model", 1);
+		
+		return utility_functions::get_random_in_range(min_model, max_model);
+	}
+	
 	car_simulation::car_simulation(int car_id) {
 		this->car_id = car_id;
-		car_model_id = 1;
+		car_model_id = get_random_car_model();
 		position = {0.f, 0.f};
 		direction = {0.f, 0.f};
 		desired_direction = {0.f, 0.f};
 		next_intersection = {0.f, 0.f};
 		rotation_speed = json_helper<float>::get_value_or_default("rotation_speed", 0.f);
 		set_moving_straight_velocity(velocity);
-		
-		std::string car_key = get_car_key(car_model_id, "/car_front_offset");
-		car_front_offset = json_helper<float>::get_value_or_default(car_key, 0.f);
 		
 		is_turning = false;
 		status = IDLE;	
@@ -123,7 +127,7 @@ namespace digital_twin {
 	}
 	
 	void publish_car_model(int car_id, int car_model_id, digital_twin_client &client) {
-		std::string car_model_key = get_car_key(car_model_id, "/path");
+		std::string car_model_key = get_car_key(car_model_id);
 		std::string model_file_path = json_helper<std::string>::get_value_or_default(car_model_key, "");
 		
 		if (model_file_path.empty()) {
@@ -134,16 +138,6 @@ namespace digital_twin {
 		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/model", "registration_topic/qos", "registration_topic/retain");
 		
 		int rc = client.publish_file(model_file_path, setting);
-		if (rc != MOSQ_ERR_SUCCESS) exit(1);
-	}
-	
-	void publish_model_rotation_offset(int car_id, int car_model_id, digital_twin_client &client) {
-		std::string car_rotation_offset_key = get_car_key(car_model_id, "/rotation_offset");
-		float rotation_offset = json_helper<float>::get_value_or_default(car_rotation_offset_key, 0);
-		
-		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "registration_topic/topic/rotation_offset", "registration_topic/qos", "registration_topic/retain");
-		
-		int rc = client.publish_message(std::to_string(rotation_offset), setting);
 		if (rc != MOSQ_ERR_SUCCESS) exit(1);
 	}
 		
@@ -190,8 +184,6 @@ namespace digital_twin {
 		subscribe(car_id, client);
 		
 		publish_car_model(car_id, car_model_id, client);
-		
-		publish_model_rotation_offset(car_id, car_model_id, client);
 		
 		publish_gate(car_id, client);
 		
@@ -258,9 +250,10 @@ namespace digital_twin {
 		if (is_pass_frame || status == car_status::WAITING) client.publish_message(message, setting);
 	}
 	
-	void check_intersection(float car_front_offset, struct vector_2 position, struct vector_2 direction, struct vector_2 next_intersection, car_status &status) {
+	void check_intersection(struct vector_2 position, struct vector_2 direction, struct vector_2 next_intersection, car_status &status) {
+		float offset = 0.5f;
 		
-		bool is_collide = std::abs((next_intersection.x - (position.x + car_front_offset * direction.x))) < 0.5f && std::abs((next_intersection.z - (position.z + car_front_offset * direction.z))) < 0.5f;
+		bool is_collide = std::abs((next_intersection.x - (position.x + offset * direction.x))) < 0.5f && std::abs((next_intersection.z - (position.z + offset * direction.z))) < 0.5f;
 		
 		if (is_collide && status != car_status::BLOCKING) status = car_status::WAITING;
 	}
@@ -279,7 +272,7 @@ namespace digital_twin {
 			
 			if (is_turning) turn(car_id, car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client, is_pass_frame);
 		
-			check_intersection(car_front_offset, position, direction, next_intersection, status);
+			check_intersection(position, direction, next_intersection, status);
 		
 			move(car_id, status, position, direction, velocity, delta_time, client, is_pass_frame);
 		}

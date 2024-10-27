@@ -37,7 +37,6 @@ namespace digital_twin {
 		private:
 			int car_id;
 			float rotation_speed;
-			float car_front_offset;
 			
 			std::function<void(struct mosquitto_message)> message_received_event;
 			

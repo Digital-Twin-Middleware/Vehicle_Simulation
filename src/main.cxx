@@ -30,11 +30,13 @@ void run_simulation(int id) {
 }
 
 void signal_handler(int signal) {
-    running = false;
     std::cout << "Terminating simulation..." << std::endl;
+    
     for (pid_t pid : children_pids) {
         kill(pid, SIGTERM);
     }
+    
+    exit(1);
 }
 
 void launch_simulation() {

@@ -13,7 +13,6 @@
 	"registration_topic": {
 		"topic": {
 			"model": "registration/model",
-			"rotation_offset": "registration/rotation_offset",
 			"start_gate": "registration/start_gate",
 			"end_gate": "registration/end_gate",
 			"ready": "registration/ready"
@@ -45,12 +44,17 @@
 	"publish_setting": {
 		"file_publishing_chunk_size": 1024	
 	},
+	"car_model_path": {
+		"model_1": "models/Car.glb",
+		"model_2": "models/Limousine.glb",
+		"model_3": "models/Pickup.glb",
+		"model_4": "models/Police.glb",
+		"model_5": "models/SUV.glb",
+		"model_6": "models/Van.glb"
+	},
 	"car_model": {
-		"model_1": {
-			"path": "models/car.glb",
-			"rotation_offset": -90,
-			"car_front_offset": 0.5
-		}
+		"min_model": 1,
+		"max_model": 6
 	},
 	"gate": {
 		"min_gate": 1,
