@@ -5,10 +5,14 @@
 #include <random>
 
 #include "utility_functions.h"
+#include "json_helper.h"
 
 namespace digital_twin {
 	utility_functions::utility_functions() {
 		current_time = std::chrono::steady_clock::now();
+		
+		time_per_frame = 1.f / json_helper<float>::get_value_or_default("fps", 60);
+		current_time_frame = 0.f; 
 	}
 	
 	float utility_functions::get_delta_time() {
@@ -18,7 +22,23 @@ namespace digital_twin {
 		
 		current_time = new_time;
 		
+		current_time_frame += delta_time;
+		
+		if (current_time_frame >= time_per_frame) {
+			passed = true;
+			current_time_frame -= time_per_frame;
+		}
+		
 		return delta_time;
+	}
+	
+	bool utility_functions::is_pass_frame() {
+		if (passed) {
+			passed = false;
+			return true;
+		}
+		
+		return false;
 	}
 
 	std::vector<std::string> utility_functions::split_text(std::string text, char delimiter) {

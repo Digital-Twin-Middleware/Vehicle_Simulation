@@ -206,7 +206,7 @@ namespace digital_twin {
 	}
 	
 	
-	void turn(int car_id, int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client) {
+	void turn(int car_id, int car_model_id, float delta_time, float &velocity, float rotation_speed, struct vector_2 &direction, struct vector_2 desired_direction, bool &is_turning, digital_twin_client &client, bool is_pass_frame) {
 		
 		float target_angle = angle_between_two_normalized_vectors(direction, desired_direction);
 		float cross_product = direction.x * desired_direction.z - direction.z * desired_direction.x;
@@ -236,10 +236,13 @@ namespace digital_twin {
 		ss << direction.x << '/' << direction.z;
 		std::string message = ss.str();
 		
-		client.publish_message(message, setting);
+		if (setting.qos_level > 0) client.publish_message(message, setting);
+		else {
+			if (is_pass_frame) client.publish_message(message, setting);
+		}
 	}
 	
-	void move(int car_id, struct vector_2 &position, struct vector_2 direction, float velocity, float delta_time, digital_twin_client &client) {
+	void move(int car_id, car_status status, struct vector_2 &position, struct vector_2 direction, float velocity, float delta_time, digital_twin_client &client, bool is_pass_frame) {
 		float delta_x = direction.x * velocity * delta_time;
 		float delta_z = direction.z * velocity * delta_time;
 		
@@ -252,7 +255,7 @@ namespace digital_twin {
 		ss << position.x << '/' << position.z;
 		std::string message = ss.str();
 		
-		client.publish_message(message, setting);
+		if (is_pass_frame || status == car_status::WAITING) client.publish_message(message, setting);
 	}
 	
 	void check_intersection(float car_front_offset, struct vector_2 position, struct vector_2 direction, struct vector_2 next_intersection, car_status &status) {
@@ -272,11 +275,13 @@ namespace digital_twin {
 		
 			if (status != car_status::RUNNING) continue;
 			
-			if (is_turning) turn(car_id, car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client);
+			bool is_pass_frame = delta_time_manager.is_pass_frame();
+			
+			if (is_turning) turn(car_id, car_model_id, delta_time, velocity, rotation_speed, direction, desired_direction, is_turning, client, is_pass_frame);
 		
 			check_intersection(car_front_offset, position, direction, next_intersection, status);
 		
-			move(car_id, position, direction, velocity, delta_time, client);
+			move(car_id, status, position, direction, velocity, delta_time, client, is_pass_frame);
 		}
 	}
 	

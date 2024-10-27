@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <iostream>
 #include <atomic>
+#include <thread>
 
 #include "digital_twin_client.h"
 #include "car_simulation.h"
@@ -48,6 +49,7 @@ int main() {
             run_simulation(i + 1);
             exit(0);
         }
+      	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     //while (true) {
