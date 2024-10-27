@@ -262,7 +262,7 @@ namespace digital_twin {
 		
 		bool is_collide = std::abs((next_intersection.x - (position.x + car_front_offset * direction.x))) < 0.5f && std::abs((next_intersection.z - (position.z + car_front_offset * direction.z))) < 0.5f;
 		
-		if (is_collide) status = car_status::WAITING;
+		if (is_collide && status != car_status::BLOCKING) status = car_status::WAITING;
 	}
 	
 	void car_simulation::run(digital_twin_client &client,  std::atomic<bool>& running) {

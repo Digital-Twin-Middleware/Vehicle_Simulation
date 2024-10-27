@@ -29,7 +29,8 @@ namespace digital_twin {
 		IDLE = 0,
 		RUNNING = 1,
 		WAITING = 2,
-		FINISH = 3,
+		BLOCKING = 3,
+		FINISH = 4
 	};
 	
 	class car_simulation {

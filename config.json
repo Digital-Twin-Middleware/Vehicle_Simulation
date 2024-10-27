@@ -1,5 +1,5 @@
 {
-	"simulation_max": 10,
+	"simulation_max": 30,
 	"fps": 120,
 	"connection": {
 		"client_id": "Vehicle",
