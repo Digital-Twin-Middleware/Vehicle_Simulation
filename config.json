@@ -6,7 +6,7 @@
 		"clean_session": true,
 		"username": "quanh2k",
 		"password": "Quocanh01",
-		"broker_address": "192.168.1.50",
+		"broker_address": "127.0.0.1",
 		"port": 1883,
 		"alive_time": 10
 	},
