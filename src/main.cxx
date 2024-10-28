@@ -6,6 +6,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <mutex>
 
 #include "digital_twin_client.h"
 #include "car_simulation.h"
@@ -17,6 +18,7 @@ std::atomic<bool> running(true);
 std::vector<pid_t> children_pids;
 std::atomic<int> active_children(0);
 std::atomic<int> index_counter(0);
+std::mutex pid_mutex;
 
 void run_simulation(int id) {
     digital_twin_client client(id);
@@ -47,6 +49,7 @@ void launch_simulation() {
         run_simulation(id);
         exit(0);
     } else if (pid > 0) {
+        std::lock_guard<std::mutex> lock(pid_mutex);
         children_pids.push_back(pid);
         active_children++;
     }
@@ -62,7 +65,9 @@ void cleanup_children() {
 void sigchld_handler(int signal) {
     cleanup_children();
     
-    if (running) launch_simulation();
+    if (running && active_children < json_helper<int>::get_value_or_default("simulation_max", 0)) {
+        launch_simulation();
+    }
 }
 
 int main() {
@@ -77,7 +82,7 @@ int main() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    while(running) {
+    while (running) {
         std::this_thread::sleep_for(std::chrono::seconds(1)); 
     }
 
