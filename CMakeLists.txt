@@ -8,6 +8,7 @@ set(SOURCES
     src/json_helper.cxx
     src/car_simulation.cxx
     src/utility_functions.cxx
+    src/process_manager.cxx
 )
 
 set(CMAKE_BUILD_TYPE Debug)
