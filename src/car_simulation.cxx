@@ -223,7 +223,7 @@ namespace digital_twin {
 			set_moving_straight_velocity(velocity);
 			qos_key = "position_topic/qos/important";
 			
-			
+			publish_velocity(car_id, velocity, client);
 		}
 		else {
 			if (cross_product < 0) rotate(direction, -rotation_angle);
