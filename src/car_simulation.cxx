@@ -9,6 +9,12 @@
 #include "utility_functions.h"
 
 namespace digital_twin {
+	void publish_velocity(int car_id, float velocity, digital_twin_client &client) {
+		struct pubsub_setting setting = client.construct_pubsub_setting(car_id, "position_topic/topic/velocity", "position_topic/qos/important", "position_topic/retain");
+		
+		client.publish_message(std::to_string(velocity), setting);
+	}
+
 	void set_moving_straight_velocity(float &velocity) {
 		velocity = json_helper<float>::get_value_or_default("velocity/straight", 0.f);
 	}
@@ -52,7 +58,7 @@ namespace digital_twin {
 		return acos(dot_product);
 	}
 	
-	void process_commands(std::string command, std::string message, car_simulation* car) {
+	void process_commands(std::string command, std::string message, car_simulation* car, digital_twin_client *client) {
 		if (command == "position") {
 		
 			size_t slashPos = message.find('/');
@@ -83,6 +89,8 @@ namespace digital_twin {
 					float cross_product = car->direction.x * car->desired_direction.z - car->direction.z * car->desired_direction.x;
 					car->velocity = cross_product < 0 ? json_helper<float>::get_value_or_default("velocity/right", 0.f) : json_helper<float>::get_value_or_default("velocity/left", 0.f);
 				}
+				
+				publish_velocity(car->car_id, car->velocity, *client);
 			}
 		}
 		else if (command == "intersection") {
@@ -100,7 +108,7 @@ namespace digital_twin {
 		else std::cerr << "Command not found: " << command << "." << std::endl;
 	}
 	
-	void car_simulation::on_message_received(struct mosquitto_message message) {
+	void car_simulation::on_message_received(struct mosquitto_message message, digital_twin_client *client) {
 		if (!(message.payload && message.topic)) return;
 		
 		std::string topic = message.topic;
@@ -112,10 +120,10 @@ namespace digital_twin {
 		
 		std::string payload(static_cast<char*>(message.payload), message.payloadlen);
 		
-		process_commands(command, payload, this);
+		process_commands(command, payload, this, client);
 	}
 	
-	void set_callback(digital_twin_client &client, std::function<void(struct mosquitto_message)> &message_received_event) {
+	void set_callback(digital_twin_client &client, std::function<void(struct mosquitto_message, digital_twin_client *)> &message_received_event) {
 		client.register_message_received_callback(message_received_event);
 	}
 	
@@ -175,8 +183,8 @@ namespace digital_twin {
 	}
 	
 	void car_simulation::register_data(digital_twin_client &client) {
-        message_received_event = [this](struct mosquitto_message msg) {
-            this->on_message_received(msg);
+        message_received_event = [this](struct mosquitto_message msg, digital_twin_client *client) {
+            this->on_message_received(msg, client);
         };
         
         set_callback(client, message_received_event);
@@ -214,6 +222,8 @@ namespace digital_twin {
 			is_turning = false;
 			set_moving_straight_velocity(velocity);
 			qos_key = "position_topic/qos/important";
+			
+			
 		}
 		else {
 			if (cross_product < 0) rotate(direction, -rotation_angle);
@@ -228,9 +238,13 @@ namespace digital_twin {
 		ss << direction.x << '/' << direction.z;
 		std::string message = ss.str();
 		
-		if (setting.qos_level > 0) client.publish_message(message, setting);
+		if (setting.qos_level > 0) {
+			client.publish_message(message, setting);
+		}
 		else {
-			if (is_pass_frame) client.publish_message(message, setting);
+			if (!is_pass_frame) return;
+			
+			client.publish_message(message, setting);
 		}
 	}
 	

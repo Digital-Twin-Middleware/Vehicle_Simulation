@@ -35,13 +35,13 @@ namespace digital_twin {
 	
 	class car_simulation {
 		private:
-			int car_id;
 			float rotation_speed;
 			
-			std::function<void(struct mosquitto_message)> message_received_event;
+			std::function<void(struct mosquitto_message, digital_twin_client *)> message_received_event;
 			
-			void on_message_received(struct mosquitto_message message);
+			void on_message_received(struct mosquitto_message message, digital_twin_client *client);
 		public:
+			int car_id;
 			int car_model_id;
 			struct vector_2 position;
 			struct vector_2 desired_direction;

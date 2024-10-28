@@ -18,7 +18,7 @@ namespace digital_twin {
     	private:
 			struct mosquitto *mqtt_client;
 			int file_publishing_chunk_size;
-			std::vector<std::function<void(struct mosquitto_message)>> message_received_callbacks;	
+			std::vector<std::function<void(struct mosquitto_message, digital_twin_client *client)>> message_received_callbacks;	
 			void message_received(struct mosquitto *mqtt_client, void* user_data, const struct mosquitto_message *message);
         public:
         	digital_twin_client(int id);
@@ -28,8 +28,8 @@ namespace digital_twin {
             int publish_message(std::string message, struct pubsub_setting setting);
             int publish_file(std::string file_path, struct pubsub_setting setting);
             int subscribe(struct pubsub_setting setting);
-            void register_message_received_callback(std::function<void(struct mosquitto_message)> callback);
-            void unregister_message_received_callback(std::function<void(struct mosquitto_message)> callback);
+            void register_message_received_callback(std::function<void(struct mosquitto_message, digital_twin_client *client)> callback);
+            void unregister_message_received_callback(std::function<void(struct mosquitto_message, digital_twin_client *client)> callback);
             void invoke_message_received_event(struct mosquitto_message message);
     };
 }

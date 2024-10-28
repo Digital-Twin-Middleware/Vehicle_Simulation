@@ -207,20 +207,20 @@ namespace digital_twin {
     	return rc;
     }
     
-    void digital_twin_client::register_message_received_callback(std::function<void(struct mosquitto_message)> callback) {
+    void digital_twin_client::register_message_received_callback(std::function<void(struct mosquitto_message, digital_twin_client *client)> callback) {
     	message_received_callbacks.push_back(callback);
     }
     
-    void digital_twin_client::unregister_message_received_callback(std::function<void(struct mosquitto_message)> callback) {
+    void digital_twin_client::unregister_message_received_callback(std::function<void(struct mosquitto_message, digital_twin_client *client)> callback) {
     	message_received_callbacks.erase(std::remove_if(message_received_callbacks.begin(), message_received_callbacks.end(),
-            [&](const std::function<void(struct mosquitto_message)> &registeredCallback) {
+            [&](const std::function<void(struct mosquitto_message, digital_twin_client *client)> &registeredCallback) {
                 return registeredCallback.target<void(std::string)>() == callback.target<void(std::string)>();
             }), message_received_callbacks.end());
     }
     
     void digital_twin_client::invoke_message_received_event(struct mosquitto_message message) {
     	for (auto &callback : message_received_callbacks) {
- 			callback(message);
+ 			callback(message, this);
  		}
     }
 }
